@@ -1,0 +1,698 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "name": "Assignment 3A.ipynb",
+      "version": "0.3.2",
+      "provenance": [],
+      "collapsed_sections": [],
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "accelerator": "GPU"
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/Varun-Singhal/Neural-Network/blob/master/DepthWiseConvolution\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "metadata": {
+        "id": "aNyZv-Ec52ot",
+        "colab_type": "text"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "# **Import Libraries and modules**"
+      ]
+    },
+    {
+      "metadata": {
+        "id": "3m3w1Cw49Zkt",
+        "colab_type": "code",
+        "outputId": "594b88f7-3db8-4032-e625-7e70d42c2ccd",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 34
+        }
+      },
+      "cell_type": "code",
+      "source": [
+        "# https://keras.io/\n",
+        "!pip install -q keras\n",
+        "import keras"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Using TensorFlow backend.\n"
+          ],
+          "name": "stderr"
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "id": "Eso6UHE080D4",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "cell_type": "code",
+      "source": [
+        "import numpy as np\n",
+        "\n",
+        "from keras.models import Model\n",
+        "from keras.layers import Dense, Dropout, Activation, Flatten, Add, Input\n",
+        "from keras.layers import Convolution2D, MaxPooling2D, SeparableConv2D, BatchNormalization\n",
+        "from keras.utils import np_utils\n",
+        "\n",
+        "from keras.datasets import mnist"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "id": "zByEi95J86RD",
+        "colab_type": "text"
+      },
+      "cell_type": "markdown",
+      "source": [
+        "### Load pre-shuffled MNIST data into train and test sets"
+      ]
+    },
+    {
+      "metadata": {
+        "id": "7eRM0QWN83PV",
+        "colab_type": "code",
+        "outputId": "153e4980-7f15-425a-a61f-2d28923b36e6",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 51
+        }
+      },
+      "cell_type": "code",
+      "source": [
+        "(X_train, y_train), (X_test, y_test) = mnist.load_data()"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Downloading data from https://s3.amazonaws.com/img-datasets/mnist.npz\n",
+            "11493376/11490434 [==============================] - 1s 0us/step\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "id": "4a4Be72j8-ZC",
+        "colab_type": "code",
+        "outputId": "c57e6233-f3f3-4f6b-f75c-760993968aac",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 299
+        }
+      },
+      "cell_type": "code",
+      "source": [
+        "print (X_train.shape)\n",
+        "from matplotlib import pyplot as plt\n",
+        "%matplotlib inline\n",
+        "plt.imshow(X_train[10])"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "(60000, 28, 28)\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "<matplotlib.image.AxesImage at 0x7f7a5affaac8>"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 5
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "image/png": "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\n",
+            "text/plain": [
+              "<Figure size 432x288 with 1 Axes>"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          }
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "id": "dkmprriw9AnZ",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "cell_type": "code",
+      "source": [
+        "X_train = X_train.reshape(X_train.shape[0], 28, 28,1)\n",
+        "X_test = X_test.reshape(X_test.shape[0], 28, 28,1)"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "id": "X2m4YS4E9CRh",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "cell_type": "code",
+      "source": [
+        "X_train = X_train.astype('float32')\n",
+        "X_test = X_test.astype('float32')\n",
+        "X_train /= 255\n",
+        "X_test /= 255"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "id": "0Mn0vAYD9DvB",
+        "colab_type": "code",
+        "outputId": "66bbb843-9f7f-4541-a4d2-093e3ff0f457",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 34
+        }
+      },
+      "cell_type": "code",
+      "source": [
+        "y_train[:10]"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "array([5, 0, 4, 1, 9, 2, 1, 3, 1, 4], dtype=uint8)"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 8
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "id": "ZG8JiXR39FHC",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "cell_type": "code",
+      "source": [
+        "# Convert 1-dimensional class arrays to 10-dimensional class matrices\n",
+        "Y_train = np_utils.to_categorical(y_train, 10)\n",
+        "Y_test = np_utils.to_categorical(y_test, 10)"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "id": "fYlFRvKS9HMB",
+        "colab_type": "code",
+        "outputId": "b747aab4-954c-42bb-d8a5-247dce74cfef",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 187
+        }
+      },
+      "cell_type": "code",
+      "source": [
+        "Y_train[:10]\n"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "array([[0., 0., 0., 0., 0., 1., 0., 0., 0., 0.],\n",
+              "       [1., 0., 0., 0., 0., 0., 0., 0., 0., 0.],\n",
+              "       [0., 0., 0., 0., 1., 0., 0., 0., 0., 0.],\n",
+              "       [0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],\n",
+              "       [0., 0., 0., 0., 0., 0., 0., 0., 0., 1.],\n",
+              "       [0., 0., 1., 0., 0., 0., 0., 0., 0., 0.],\n",
+              "       [0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],\n",
+              "       [0., 0., 0., 1., 0., 0., 0., 0., 0., 0.],\n",
+              "       [0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],\n",
+              "       [0., 0., 0., 0., 1., 0., 0., 0., 0., 0.]], dtype=float32)"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 10
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "id": "osKqT73Q9JJB",
+        "colab_type": "code",
+        "outputId": "a17ceb63-f6ce-4d36-8b2f-011c0feeab3b",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 170
+        }
+      },
+      "cell_type": "code",
+      "source": [
+        "inpu = Input((28,28,1))\n",
+        "layer1 = SeparableConv2D(32,3,3,activation='relu')(inpu)\n",
+        "layer2 = SeparableConv2D(45,3,3,activation='relu')(layer1)\n",
+        "layer3 = MaxPooling2D((2,2))(layer2)\n",
+        "\n",
+        "layer5 = SeparableConv2D(35,3,3,activation='relu')(layer3)\n",
+        "layer6 = SeparableConv2D(50,3,3,activation='relu')(layer5)\n",
+        "norm = BatchNormalization()(layer6)\n",
+        "layer7 = MaxPooling2D((2,2))(norm)\n",
+        "\n",
+        "layer8 = Flatten()(layer7)\n",
+        "output = Dense(10,activation='softmax')(layer8)\n",
+        " \n",
+        "model = Model(input=inpu, output=output)"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "/usr/local/lib/python3.6/dist-packages/ipykernel_launcher.py:2: UserWarning: Update your `SeparableConv2D` call to the Keras 2 API: `SeparableConv2D(32, (3, 3), activation=\"relu\")`\n",
+            "  \n",
+            "/usr/local/lib/python3.6/dist-packages/ipykernel_launcher.py:3: UserWarning: Update your `SeparableConv2D` call to the Keras 2 API: `SeparableConv2D(45, (3, 3), activation=\"relu\")`\n",
+            "  This is separate from the ipykernel package so we can avoid doing imports until\n",
+            "/usr/local/lib/python3.6/dist-packages/ipykernel_launcher.py:10: UserWarning: Update your `SeparableConv2D` call to the Keras 2 API: `SeparableConv2D(35, (3, 3), activation=\"relu\")`\n",
+            "  # Remove the CWD from sys.path while we load stuff.\n",
+            "/usr/local/lib/python3.6/dist-packages/ipykernel_launcher.py:11: UserWarning: Update your `SeparableConv2D` call to the Keras 2 API: `SeparableConv2D(50, (3, 3), activation=\"relu\")`\n",
+            "  # This is added back by InteractiveShellApp.init_path()\n",
+            "/usr/local/lib/python3.6/dist-packages/ipykernel_launcher.py:18: UserWarning: Update your `Model` call to the Keras 2 API: `Model(inputs=Tensor(\"in..., outputs=Tensor(\"de...)`\n"
+          ],
+          "name": "stderr"
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "id": "TzdAYg1k9K7Z",
+        "colab_type": "code",
+        "outputId": "9852ee55-fc80-4582-9ecb-701eb6ba0944",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 476
+        }
+      },
+      "cell_type": "code",
+      "source": [
+        "model.summary()"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "_________________________________________________________________\n",
+            "Layer (type)                 Output Shape              Param #   \n",
+            "=================================================================\n",
+            "input_3 (InputLayer)         (None, 28, 28, 1)         0         \n",
+            "_________________________________________________________________\n",
+            "separable_conv2d_9 (Separabl (None, 26, 26, 32)        73        \n",
+            "_________________________________________________________________\n",
+            "separable_conv2d_10 (Separab (None, 24, 24, 45)        1773      \n",
+            "_________________________________________________________________\n",
+            "max_pooling2d_5 (MaxPooling2 (None, 12, 12, 45)        0         \n",
+            "_________________________________________________________________\n",
+            "separable_conv2d_11 (Separab (None, 10, 10, 35)        2015      \n",
+            "_________________________________________________________________\n",
+            "separable_conv2d_12 (Separab (None, 8, 8, 50)          2115      \n",
+            "_________________________________________________________________\n",
+            "batch_normalization_3 (Batch (None, 8, 8, 50)          200       \n",
+            "_________________________________________________________________\n",
+            "max_pooling2d_6 (MaxPooling2 (None, 4, 4, 50)          0         \n",
+            "_________________________________________________________________\n",
+            "flatten_3 (Flatten)          (None, 800)               0         \n",
+            "_________________________________________________________________\n",
+            "dense_3 (Dense)              (None, 10)                8010      \n",
+            "=================================================================\n",
+            "Total params: 14,186\n",
+            "Trainable params: 14,086\n",
+            "Non-trainable params: 100\n",
+            "_________________________________________________________________\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "id": "Zp6SuGrL9M3h",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "cell_type": "code",
+      "source": [
+        "model.compile(loss='categorical_crossentropy',\n",
+        "             optimizer='adam',\n",
+        "             metrics=['accuracy'])"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "id": "4xWoKhPY9Of5",
+        "colab_type": "code",
+        "outputId": "e3c85f8f-40fd-4a0a-a7c9-238afba005f5",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 785
+        }
+      },
+      "cell_type": "code",
+      "source": [
+        "model.fit(X_train, Y_train, batch_size=20, epochs=20, verbose=1)"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "WARNING:tensorflow:From /usr/local/lib/python3.6/dist-packages/tensorflow/python/ops/math_ops.py:3066: to_int32 (from tensorflow.python.ops.math_ops) is deprecated and will be removed in a future version.\n",
+            "Instructions for updating:\n",
+            "Use tf.cast instead.\n",
+            "Epoch 1/20\n",
+            "60000/60000 [==============================] - 40s 671us/step - loss: 0.1493 - acc: 0.9543\n",
+            "Epoch 2/20\n",
+            "60000/60000 [==============================] - 37s 617us/step - loss: 0.0586 - acc: 0.9817\n",
+            "Epoch 3/20\n",
+            "60000/60000 [==============================] - 37s 616us/step - loss: 0.0470 - acc: 0.9849\n",
+            "Epoch 4/20\n",
+            "60000/60000 [==============================] - 37s 617us/step - loss: 0.0408 - acc: 0.9876\n",
+            "Epoch 5/20\n",
+            "60000/60000 [==============================] - 37s 618us/step - loss: 0.0356 - acc: 0.9888\n",
+            "Epoch 6/20\n",
+            "60000/60000 [==============================] - 37s 617us/step - loss: 0.0312 - acc: 0.9899\n",
+            "Epoch 7/20\n",
+            "60000/60000 [==============================] - 37s 616us/step - loss: 0.0275 - acc: 0.9910\n",
+            "Epoch 8/20\n",
+            "60000/60000 [==============================] - 37s 619us/step - loss: 0.0265 - acc: 0.9921\n",
+            "Epoch 9/20\n",
+            "60000/60000 [==============================] - 37s 619us/step - loss: 0.0241 - acc: 0.9929\n",
+            "Epoch 10/20\n",
+            "60000/60000 [==============================] - 37s 618us/step - loss: 0.0214 - acc: 0.9929\n",
+            "Epoch 11/20\n",
+            "60000/60000 [==============================] - 37s 616us/step - loss: 0.0204 - acc: 0.9936\n",
+            "Epoch 12/20\n",
+            "60000/60000 [==============================] - 37s 617us/step - loss: 0.0181 - acc: 0.9941\n",
+            "Epoch 13/20\n",
+            "60000/60000 [==============================] - 37s 617us/step - loss: 0.0164 - acc: 0.9948\n",
+            "Epoch 14/20\n",
+            "60000/60000 [==============================] - 37s 617us/step - loss: 0.0157 - acc: 0.9946\n",
+            "Epoch 15/20\n",
+            "60000/60000 [==============================] - 37s 617us/step - loss: 0.0147 - acc: 0.9950\n",
+            "Epoch 16/20\n",
+            "60000/60000 [==============================] - 37s 615us/step - loss: 0.0133 - acc: 0.9955\n",
+            "Epoch 17/20\n",
+            "60000/60000 [==============================] - 37s 618us/step - loss: 0.0133 - acc: 0.9957\n",
+            "Epoch 18/20\n",
+            "60000/60000 [==============================] - 37s 618us/step - loss: 0.0109 - acc: 0.9962\n",
+            "Epoch 19/20\n",
+            "60000/60000 [==============================] - 37s 617us/step - loss: 0.0111 - acc: 0.9964\n",
+            "Epoch 20/20\n",
+            "60000/60000 [==============================] - 37s 618us/step - loss: 0.0121 - acc: 0.9960\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "<keras.callbacks.History at 0x7f7a5afb6ac8>"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 18
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "id": "AtsH-lLk-eLb",
+        "colab_type": "code",
+        "outputId": "e2aeb221-f705-46ef-b760-a21a16f4d4f5",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 34
+        }
+      },
+      "cell_type": "code",
+      "source": [
+        "score = model.evaluate(X_test, Y_test, verbose=0)\n",
+        "print(score)"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "[0.038923114645127405, 0.9905]\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "id": "OCWoJkwE9suh",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "cell_type": "code",
+      "source": [
+        "y_pred = model.predict(X_test)"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "id": "Ym7iCFBm9uBs",
+        "colab_type": "code",
+        "outputId": "6b8ec265-bf79-4c47-c4c0-958ea0bf47ee",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 493
+        }
+      },
+      "cell_type": "code",
+      "source": [
+        "print(y_pred[:9])\n",
+        "print(y_test[:9])"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "[[8.68741385e-14 1.63792941e-19 4.49343271e-11 9.55145518e-10\n",
+            "  3.38985724e-21 2.69578332e-13 1.66603940e-21 1.00000000e+00\n",
+            "  9.91091635e-14 3.79651199e-09]\n",
+            " [6.96308927e-17 1.62106808e-12 1.00000000e+00 6.91273998e-20\n",
+            "  5.03353448e-24 8.92228012e-25 1.11081231e-14 6.58109904e-21\n",
+            "  6.00315345e-17 3.05289591e-19]\n",
+            " [1.12370599e-10 9.99991417e-01 2.87662810e-11 3.13960968e-09\n",
+            "  2.10644271e-06 6.25733446e-06 5.84873838e-09 2.39861748e-07\n",
+            "  7.24875271e-09 2.43912157e-09]\n",
+            " [9.99999404e-01 1.88810639e-21 5.29122579e-10 4.04820627e-13\n",
+            "  8.14289283e-13 4.71635968e-13 1.01151720e-07 2.20896232e-13\n",
+            "  3.70945302e-10 4.28109985e-07]\n",
+            " [8.37841449e-17 2.42625388e-15 1.68705868e-16 4.11055196e-14\n",
+            "  9.99999762e-01 4.07822277e-17 2.63989100e-14 1.23321619e-14\n",
+            "  7.07080949e-10 2.37262853e-07]\n",
+            " [1.04820709e-11 9.99994278e-01 1.09498044e-11 3.96820410e-10\n",
+            "  3.61194770e-06 7.58846674e-09 1.50926546e-11 2.14180909e-06\n",
+            "  3.77490594e-10 1.14829986e-08]\n",
+            " [6.82998853e-27 7.04323735e-15 3.01583619e-16 1.59894007e-15\n",
+            "  9.99999642e-01 2.43020910e-15 1.91288748e-20 1.06087222e-11\n",
+            "  7.37176098e-09 3.68552037e-07]\n",
+            " [8.90683930e-18 4.19489097e-17 1.78705384e-11 2.25327179e-12\n",
+            "  4.77553002e-08 6.48921819e-11 8.57842922e-21 1.15219589e-16\n",
+            "  3.75661568e-12 1.00000000e+00]\n",
+            " [1.08198964e-14 7.72257461e-16 8.12759707e-15 6.92135900e-17\n",
+            "  2.13778843e-12 9.96717989e-01 1.12255468e-04 2.33495044e-19\n",
+            "  3.16975522e-03 4.62413137e-12]]\n",
+            "[7 2 1 0 4 1 4 9 5]\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "id": "CT--y98_dr2T",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "cell_type": "code",
+      "source": [
+        "layer_dict = dict([(layer.name, layer) for layer in model.layers])"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "metadata": {
+        "id": "2GY4Upv4dsUR",
+        "colab_type": "code",
+        "outputId": "df0eb6d1-7034-44a0-adcf-100936895639",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 316
+        }
+      },
+      "cell_type": "code",
+      "source": [
+        "import numpy as np\n",
+        "from matplotlib import pyplot as plt\n",
+        "from keras import backend as K\n",
+        "%matplotlib inline\n",
+        "# util function to convert a tensor into a valid image\n",
+        "def deprocess_image(x):\n",
+        "    # normalize tensor: center on 0., ensure std is 0.1\n",
+        "    x -= x.mean()\n",
+        "    x /= (x.std() + 1e-5)\n",
+        "    x *= 0.1\n",
+        "\n",
+        "    # clip to [0, 1]\n",
+        "    x += 0.5\n",
+        "    x = np.clip(x, 0, 1)\n",
+        "\n",
+        "    # convert to RGB array\n",
+        "    x *= 255\n",
+        "    #x = x.transpose((1, 2, 0))\n",
+        "    x = np.clip(x, 0, 255).astype('uint8')\n",
+        "    return x\n",
+        "\n",
+        "def vis_img_in_filter(img = np.array(X_train[2]).reshape((1, 28, 28, 1)).astype(np.float64), \n",
+        "                      layer_name = 'conv2d_14'):\n",
+        "    layer_output = layer_dict[layer_name].output\n",
+        "    img_ascs = list()\n",
+        "    for filter_index in range(layer_output.shape[3]):\n",
+        "        # build a loss function that maximizes the activation\n",
+        "        # of the nth filter of the layer considered\n",
+        "        loss = K.mean(layer_output[:, :, :, filter_index])\n",
+        "\n",
+        "        # compute the gradient of the input picture wrt this loss\n",
+        "        grads = K.gradients(loss, model.input)[0]\n",
+        "\n",
+        "        # normalization trick: we normalize the gradient\n",
+        "        grads /= (K.sqrt(K.mean(K.square(grads))) + 1e-5)\n",
+        "\n",
+        "        # this function returns the loss and grads given the input picture\n",
+        "        iterate = K.function([model.input], [loss, grads])\n",
+        "\n",
+        "        # step size for gradient ascent\n",
+        "        step = 5.\n",
+        "\n",
+        "        img_asc = np.array(img)\n",
+        "        # run gradient ascent for 20 steps\n",
+        "        for i in range(20):\n",
+        "            loss_value, grads_value = iterate([img_asc])\n",
+        "            img_asc += grads_value * step\n",
+        "\n",
+        "        img_asc = img_asc[0]\n",
+        "        img_ascs.append(deprocess_image(img_asc).reshape((28, 28)))\n",
+        "        \n",
+        "    if layer_output.shape[3] >= 35:\n",
+        "        plot_x, plot_y = 6, 6\n",
+        "    elif layer_output.shape[3] >= 23:\n",
+        "        plot_x, plot_y = 4, 6\n",
+        "    elif layer_output.shape[3] >= 11:\n",
+        "        plot_x, plot_y = 2, 6\n",
+        "    else:\n",
+        "        plot_x, plot_y = 1, 2\n",
+        "    fig, ax = plt.subplots(plot_x, plot_y, figsize = (12, 12))\n",
+        "    ax[0, 0].imshow(img.reshape((28, 28)), cmap = 'gray')\n",
+        "    ax[0, 0].set_title('Input image')\n",
+        "    fig.suptitle('Input image and %s filters' % (layer_name,))\n",
+        "    fig.tight_layout(pad = 0.3, rect = [0, 0, 0.9, 0.9])\n",
+        "    for (x, y) in [(i, j) for i in range(plot_x) for j in range(plot_y)]:\n",
+        "        if x == 0 and y == 0:\n",
+        "            continue\n",
+        "        ax[x, y].imshow(img_ascs[x * plot_y + y - 1], cmap = 'gray')\n",
+        "        ax[x, y].set_title('filter %d' % (x * plot_y + y - 1))\n",
+        "\n",
+        "vis_img_in_filter()"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "error",
+          "ename": "KeyError",
+          "evalue": "ignored",
+          "traceback": [
+            "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+            "\u001b[0;31mKeyError\u001b[0m                                  Traceback (most recent call last)",
+            "\u001b[0;32m<ipython-input-23-19229f66b51a>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[1;32m     69\u001b[0m         \u001b[0max\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mx\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0my\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mset_title\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'filter %d'\u001b[0m \u001b[0;34m%\u001b[0m \u001b[0;34m(\u001b[0m\u001b[0mx\u001b[0m \u001b[0;34m*\u001b[0m \u001b[0mplot_y\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0my\u001b[0m \u001b[0;34m-\u001b[0m \u001b[0;36m1\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     70\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 71\u001b[0;31m \u001b[0mvis_img_in_filter\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+            "\u001b[0;32m<ipython-input-23-19229f66b51a>\u001b[0m in \u001b[0;36mvis_img_in_filter\u001b[0;34m(img, layer_name)\u001b[0m\n\u001b[1;32m     22\u001b[0m def vis_img_in_filter(img = np.array(X_train[2]).reshape((1, 28, 28, 1)).astype(np.float64), \n\u001b[1;32m     23\u001b[0m                       layer_name = 'conv2d_14'):\n\u001b[0;32m---> 24\u001b[0;31m     \u001b[0mlayer_output\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mlayer_dict\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mlayer_name\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0moutput\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     25\u001b[0m     \u001b[0mimg_ascs\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mlist\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     26\u001b[0m     \u001b[0;32mfor\u001b[0m \u001b[0mfilter_index\u001b[0m \u001b[0;32min\u001b[0m \u001b[0mrange\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mlayer_output\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mshape\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;36m3\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;31mKeyError\u001b[0m: 'conv2d_14'"
+          ]
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "id": "9tvptcn8dxvp",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "cell_type": "code",
+      "source": [
+        ""
+      ],
+      "execution_count": 0,
+      "outputs": []
+    }
+  ]
+}
